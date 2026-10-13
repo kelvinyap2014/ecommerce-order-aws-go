@@ -7,4 +7,5 @@ This project is to demonstrate the usage of:
 - Serverless architecture on AWS
 - Go (Golang)
 - Terraform
+- Git/GitHub
 
