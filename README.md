@@ -202,6 +202,8 @@ cd ../../
 
 # 4. Or build all handlers using Makefile (recommended)
 make build
+# 5. Complete pipeline: format → vet → test → build
+make all
 ```
 
 ### Build Commands
@@ -214,6 +216,7 @@ make build
 | `go fmt ./...` | Format code |
 | `make build` | Build all Lambda functions |
 | `make clean` | Remove build artifacts |
+| `make all` | Complete pipeline: format → vet → test → build |
 
 ### CI/CD: Automated Build via GitHub Actions
 
