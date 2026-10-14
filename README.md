@@ -1,5 +1,5 @@
 # E-Commerce Order Orchestration Pet Project
-This pet project is to demonstrate the skills of technical design and implementation using:
+This pet project is to demonstrate the skills of AI-assisted technical design and implementation using:
 - AWS - Step Functions, API Gateway, Lambda, DynamoDB, serverless architecture
 - Go (Golang)
 - Terraform
@@ -25,7 +25,7 @@ The system follows an event-driven, serverless paradigm. The ingestion layer acc
 graph TD
     Client["Client / Storefront"] -->|HTTP POST /orders| APIGW["Amazon API Gateway"]
     APIGW -->|Invoke| IngestLambda["Lambda: Order Ingestion (Go)"]
-    
+
     subgraph "State & Storage"
         IngestLambda -->|Write PENDING State| DDB["Amazon DynamoDB: Orders Table"]
     end
@@ -36,9 +36,9 @@ graph TD
         SF --> AddressCheck["Lambda: Address & Blacklist Check"]
         AddressCheck --> CreditCheck["Lambda: Credit Check"]
         CreditCheck --> PaymentAuth["Lambda: Payment Authorization"]
-        
+
         PaymentAuth --> Choice{All Checks Passed?}
-        
+
         Choice -->|Yes| WMS["Lambda: Dispatch to WMS Integration"]
         Choice -->|No| FailHandler["Lambda: Mark Order Failed & Refund"]
     end
@@ -134,3 +134,29 @@ ecommerce-order-aws-go/
 └── README.md                   # Comprehensive architecture & setup guide
 ```
 
+## Infrastructure as Code
+
+### Terraform Commands
+```bash
+# 1. Initialize Terraform (downloads the AWS provider plugin)
+terraform init
+# 2. Review the execution plan to see what will be created
+terraform plan
+# 3. Apply the configuration (type 'yes' when prompted, or pass -auto-approve)
+terraform apply -auto-approve
+
+# other commands
+terraform destroy -auto-approve
+# DEV
+terraform plan -var-file="terraform-dev.tfvars"
+terraform apply -var-file="terraform-dev.tfvars"
+# PROD
+terraform plan -var-file="terraform-prod.tfvars"
+terraform apply -var-file="terraform-prod.tfvars"
+```
+
+### AWS Commands
+```bash
+aws configure
+aws dynamodb describe-table --table-name ecommerce-order-orders-dev --region ap-southeast-2
+```
