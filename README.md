@@ -253,6 +253,8 @@ The workflow triggers automatically on changes to:
 ## Test API with curl
 ```bash
 # Replace <api_endpoint> with your actual API Gateway URL outputted by Terraform
+curl -X GET https://<api_endpoint>/orders
+
 curl -X POST https://<api_endpoint>/orders \
   -H "Content-Type: application/json" \
   -d '{

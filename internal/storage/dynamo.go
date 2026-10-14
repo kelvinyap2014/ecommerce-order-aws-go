@@ -15,6 +15,7 @@ import (
 type OrderRepository interface {
 	SaveOrder(ctx context.Context, order models.Order) error
 	GetOrder(ctx context.Context, orderID string) (*models.Order, error)
+	ListOrders(ctx context.Context) ([]models.Order, error)
 }
 
 // DynamoOrderRepo implements OrderRepository using Amazon DynamoDB.
@@ -73,4 +74,22 @@ func (r *DynamoOrderRepo) GetOrder(ctx context.Context, orderID string) (*models
 	}
 
 	return &order, nil
+}
+
+// ListOrders retrieves all orders from the DynamoDB table.
+func (r *DynamoOrderRepo) ListOrders(ctx context.Context) ([]models.Order, error) {
+	out, err := r.Client.Scan(ctx, &dynamodb.ScanInput{
+		TableName: aws.String(r.TableName),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan orders: %w", err)
+	}
+
+	var orders []models.Order
+	err = attributevalue.UnmarshalListOfMaps(out.Items, &orders)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal orders: %w", err)
+	}
+
+	return orders, nil
 }

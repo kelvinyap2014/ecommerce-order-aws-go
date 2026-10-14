@@ -47,10 +47,16 @@ resource "aws_apigatewayv2_integration" "lambda_integration" {
   payload_format_version = "2.0"
 }
 
-# 5. Create a POST route for orders
+# 5. Create a POST/GET route for orders
 resource "aws_apigatewayv2_route" "post_orders" {
   api_id    = aws_apigatewayv2_api.order_api.id
   route_key = "POST /orders"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+}
+
+resource "aws_apigatewayv2_route" "get_orders" {
+  api_id    = aws_apigatewayv2_api.order_api.id
+  route_key = "GET /orders"
   target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
 }
 
