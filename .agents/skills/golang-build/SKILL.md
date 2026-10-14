@@ -53,7 +53,7 @@ Each Lambda function must be compiled independently for the Linux/AMD64 platform
 #### Single Lambda Build Example
 
 ```bash
-# Build the Order Ingestion API handler
+# Build the Order API handler
 cd cmd/api
 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
 cd ../../

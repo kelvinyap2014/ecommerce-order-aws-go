@@ -67,12 +67,12 @@ jobs:
 
       - name: Build Lambda functions
         run: |
-          # Build Order Ingestion API
+          # Build Order API
           cd cmd/api
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
           zip function.zip bootstrap
           cd ../../
-          echo "✓ Built Order Ingestion API"
+          echo "✓ Built Order API"
 
           # Check if verifications directory exists and build handlers
           if [ -d "cmd/verifications" ]; then

@@ -39,8 +39,27 @@ build: clean
 	@cd cmd/api && \
 		GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go && \
 		zip -q function.zip bootstrap && \
-		echo "$(GREEN)✓ Built Order Ingestion API$(NC)" && \
+		echo "$(GREEN)✓ Built Order API$(NC)" && \
 		cd ../../
+	@if [ -d "cmd/verifications" ]; then \
+		for handler in cmd/verifications/*/main.go; do \
+			handler_dir=$$(dirname "$$handler"); \
+			handler_name=$$(basename "$$handler_dir"); \
+			echo "Building verification handler: $$handler_name"; \
+			cd "$$handler_dir" && \
+			GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go && \
+			zip -q function.zip bootstrap && \
+			echo "$(GREEN)✓ Built $$handler_name$(NC)" && \
+			cd ../../../../; \
+		done; \
+	fi
+	@if [ -d "cmd/wms-integration" ]; then \
+		cd cmd/wms-integration && \
+		GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go && \
+		zip -q function.zip bootstrap && \
+		echo "$(GREEN)✓ Built WMS Integration$(NC)" && \
+		cd ../../; \
+	fi
 	@echo ""
 	@echo "$(GREEN)All Lambda functions built successfully!$(NC)"
 

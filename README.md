@@ -114,15 +114,15 @@ The infrastructure is fully defined via modular Terraform code located in the `/
 ecommerce-order-aws-go/
 ├── .github/workflows/          # CI/CD pipeline (GitHub Actions for Terraform & Go tests)
 ├── cmd/                        # Entry points for individual Lambdas
-│   ├── api/                    # Order Ingestion API
+│   ├── api/                    # Order API
 │   ├── verifications/          # Address, Credit, and Payment checking logic
 │   └── wms-integration/        # WMS notification handler
 ├── internal/                   # Shared Go packages
 │   ├── models/                 # Domain structs (Order, Customer, Payment)
 │   ├── storage/                # DynamoDB client wrapper
-│   └── middleware/             # Logging, tracing, error handling
+│   └── logger/                 # Logging
 ├── terraform/                  # Infrastructure as Code
-│   ├── variables.tf            # Environment variables
+│   ├── variables.tf            # Project/environment variables
 │   ├── main.tf                 # Provider & backend setup
 │   ├── api_gateway.tf          # API Gateway HTTP/REST API setup
 │   ├── lambda.tf               # Lambda definitions & IAM roles
