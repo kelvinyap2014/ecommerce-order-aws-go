@@ -1,0 +1,22 @@
+{
+  "editor.tabSize": 2,
+  "editor.indentSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.stickyTabStops": false,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "[json]": {
+    "editor.tabSize": 2,
+    "editor.indentSize": 2
+  },
+  "[markdown]": {
+    "editor.tabSize": 2,
+    "editor.indentSize": 2
+  },
+  "[yaml]": {
+    "editor.tabSize": 2,
+    "editor.indentSize": 2
+  }
+}
