@@ -9,7 +9,7 @@ terraform {
 }
 
 provider "aws" {
-  region = "ap-southeast-2" # Change if you prefer another region (e.g., us-east-1)
+  region = var.region
 
   default_tags {
     tags = {
