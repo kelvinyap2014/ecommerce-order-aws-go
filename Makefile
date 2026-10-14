@@ -36,22 +36,25 @@ deps:
 # Build all Lambda functions
 build: clean
 	@echo "Building Lambda functions..."
-	@cd cmd/api && \
-		GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go && \
-		zip -q function.zip bootstrap && \
-		echo "$(GREEN)✓ Built Order API$(NC)" && \
-		cd ../../
+	@BASE_DIR=$$(pwd) && \
+	cd cmd/api && \
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go && \
+	zip -q function.zip bootstrap && \
+	echo "$(GREEN)✓ Built Order API$(NC)" && \
+	cd $$BASE_DIR
 	@if [ -d "cmd/verifications" ]; then \
-		for handler in cmd/verifications/*/main.go; do \
-			handler_dir=$$(dirname "$$handler"); \
+		BASE_DIR=$$(pwd) && \
+		for handler_main in cmd/verifications/*/main.go; do \
+			handler_dir=$$(dirname "$$handler_main"); \
 			handler_name=$$(basename "$$handler_dir"); \
 			echo "Building verification handler: $$handler_name"; \
+			cd "$$BASE_DIR" && \
 			cd "$$handler_dir" && \
 			GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go && \
 			zip -q function.zip bootstrap && \
-			echo "$(GREEN)✓ Built $$handler_name$(NC)" && \
-			cd ../../../../; \
+			echo "$(GREEN)✓ Built $$handler_name$(NC)"; \
 		done; \
+		cd "$$BASE_DIR"; \
 	fi
 	@if [ -d "cmd/wms-integration" ]; then \
 		cd cmd/wms-integration && \

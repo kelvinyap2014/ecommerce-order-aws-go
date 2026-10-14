@@ -76,16 +76,18 @@ jobs:
 
           # Check if verifications directory exists and build handlers
           if [ -d "cmd/verifications" ]; then
+            BASE_DIR=$(pwd)
             for handler in cmd/verifications/*/main.go; do
               handler_dir=$(dirname "$handler")
               handler_name=$(basename "$handler_dir")
               echo "Building verification handler: $handler_name"
+              cd "$BASE_DIR"
               cd "$handler_dir"
               GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
               zip function.zip bootstrap
-              cd ../../../../
               echo "✓ Built $handler_name"
             done
+            cd "$BASE_DIR"
           fi
 
           # Check if WMS integration handler exists and build it
