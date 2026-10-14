@@ -19,8 +19,12 @@ Before working with Terraform for this project:
 
 3. **Standard Terraform commands** for this project:
    ```bash
+   # NEW AWS EXPERIENCE: Load credentials from new AWS experience cache before running terraform
+   cd terraform
+   source ./setup-aws-credentials.sh  # Extracts credentials to environment variables
+
    # Initialize (first time, or after provider upgrades)
-   cd terraform && terraform init
+   terraform init
 
    # Plan changes (DEV) — always review before apply
    terraform plan -var-file="terraform-dev.tfvars"
@@ -33,6 +37,7 @@ Before working with Terraform for this project:
 
    # For PROD: replace terraform-dev.tfvars with terraform-prod.tfvars
    ```
+   **New AWS Experience Note:** Run `source ./setup-aws-credentials.sh` before terraform commands to extract temporary credentials from `~/.aws/login/cache/` and set them as environment variables. This script is required because Terraform's AWS provider uses different credential resolution than the AWS CLI.
 
 4. **Region constraint**: All Regional resources MUST be created in `ap-southeast-2` (user's assigned region via AWS Settings). Lambda, API Gateway, DynamoDB, and Step Functions cannot be created in other regions.
 

@@ -393,12 +393,37 @@ If you modify the ASL definition:
 
 ## 9. Common Scenarios & Troubleshooting
 
+### Scenario: "terraform plan" fails with "No valid credential sources found" or "failed to refresh cached credentials"
+
+**Cause:** Terraform AWS provider cannot access credentials via standard chain (common with new AWS experience/federated credentials).
+**Fix:**
+Use the provided `setup-aws-credentials.sh` script to extract credentials from the new AWS experience cache:
+```bash
+cd terraform
+source ./setup-aws-credentials.sh  # Extracts credentials and sets AWS_* environment variables
+terraform plan -var-file="terraform-dev.tfvars"
+```
+
+Or set credentials manually in one command:
+```bash
+cd terraform && \
+export AWS_ACCESS_KEY_ID=$(jq -r '.accessToken.accessKeyId' ~/.aws/login/cache/*.json) && \
+export AWS_SECRET_ACCESS_KEY=$(jq -r '.accessToken.secretAccessKey' ~/.aws/login/cache/*.json) && \
+export AWS_SESSION_TOKEN=$(jq -r '.accessToken.sessionToken' ~/.aws/login/cache/*.json) && \
+terraform plan -var-file="terraform-dev.tfvars"
+```
+
+**Prerequisites:**
+- Run `aws sts get-caller-identity` first to populate the credential cache
+- `jq` CLI tool must be installed for JSON parsing
+
 ### Scenario: "terraform plan" fails with "Error initializing the backend"
 
 **Cause:** Terraform not initialized or backend migration needed.
 **Fix:**
 ```bash
 cd terraform
+source ./setup-aws-credentials.sh
 terraform init
 terraform plan -var-file="terraform-dev.tfvars"
 ```

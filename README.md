@@ -136,28 +136,35 @@ ecommerce-order-aws-go/
 
 ## Infrastructure as Code
 
-### Terraform Commands
-```bash
-# 1. Initialize Terraform (downloads the AWS provider plugin)
-terraform init
-# 2. Review the execution plan to see what will be created
-terraform plan
-# 3. Apply the configuration (type 'yes' when prompted, or pass -auto-approve)
-terraform apply -auto-approve
-
-# other commands
-terraform destroy -auto-approve
-# DEV
-terraform plan -var-file="terraform-dev.tfvars"
-terraform apply -var-file="terraform-dev.tfvars"
-# PROD
-terraform plan -var-file="terraform-prod.tfvars"
-terraform apply -var-file="terraform-prod.tfvars"
-```
-
 ### AWS Commands
 ```bash
+aws login
 aws sts get-caller-identity
 aws configure
 aws dynamodb describe-table --table-name ecommerce-order-orders-dev --region ap-southeast-2
+```
+
+### Terraform Commands
+```bash
+cd terraform
+
+# NEW AWS EXPERIENCE: Load credentials from cache before running terraform
+source ./setup-aws-credentials.sh
+
+# Initialize Terraform (first time only)
+terraform init
+
+# DEV environment — plan and apply
+terraform plan -var-file="terraform-dev.tfvars"
+# Apply changes interactively (you'll be prompted with a summary, type 'yes' to confirm)
+terraform apply -var-file="terraform-dev.tfvars"
+# Or, apply without confirmation (useful for CI/CD)
+# terraform apply -var-file="terraform-dev.tfvars" -auto-approve
+
+# PROD environment — plan and apply
+terraform plan -var-file="terraform-prod.tfvars"
+terraform apply -var-file="terraform-prod.tfvars"
+
+# Destroy resources (cleanup)
+terraform destroy -var-file="terraform-dev.tfvars"
 ```
