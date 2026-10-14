@@ -175,17 +175,54 @@ terraform destroy -var-file="terraform-dev.tfvars"
 
 ## Go (Golang) development
 
+For comprehensive step-by-step guidance on building and packaging Go Lambda functions, **load the Golang Build skill**:
+```
+.agents/skills/golang-build/SKILL.md
+```
+
+### Quick Start: Build & Package Lambda Functions
+
 ```bash
-# 1. Initialize Go module
+# 1. Initialize Go module (first time only)
 go mod init ecommerce-order-aws-go
 
-# 2. Install the official AWS Lambda Go SDK
+# 2. Install dependencies
 go get github.com/aws/aws-lambda-go/events
 go get github.com/aws/aws-lambda-go/lambda
 
-# Compile and Package the Binary
+# 3. Build individual Lambda handler
 cd cmd/api
 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
 zip function.zip bootstrap
 cd ../../
+
+# 4. Or build all handlers using Makefile (recommended)
+make build
 ```
+
+### Build Commands
+
+| Command | Purpose |
+|---------|---------|
+| `go mod download` | Fetch all dependencies |
+| `go mod tidy` | Ensure consistency in go.mod / go.sum |
+| `go test ./...` | Run all unit tests |
+| `go fmt ./...` | Format code |
+| `make build` | Build all Lambda functions |
+| `make clean` | Remove build artifacts |
+
+### CI/CD: Automated Build via GitHub Actions
+
+The project includes an automated build workflow (`.github/workflows/build-golang.yml`) that runs on every push/PR to:
+1. **Format & Lint** Go code
+2. **Run Unit Tests** with coverage reporting
+3. **Build** all Lambda function binaries for Linux/AMD64
+4. **Package** binaries as ZIP files for Lambda deployment
+5. **Security Scan** dependencies for vulnerabilities
+
+The workflow triggers automatically on changes to:
+- `cmd/**` — Lambda handler code
+- `internal/**` — Shared packages
+- `go.mod`, `go.sum` — Dependencies
+- `Makefile` — Build automation
+- `.github/workflows/build-golang.yml` — Workflow definition itself

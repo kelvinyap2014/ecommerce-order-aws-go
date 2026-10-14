@@ -1,0 +1,130 @@
+name: Build Golang Code
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+      - '.github/workflows/build-golang.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+
+env:
+  GO_VERSION: '1.26'
+
+jobs:
+  build:
+    name: Build & Test Golang Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Download dependencies
+        run: |
+          go mod download
+          go mod tidy
+
+      - name: Format check
+        run: |
+          if [ -n "$(go fmt ./...)" ]; then
+            echo "Go code is not formatted. Run 'go fmt ./...'"
+            exit 1
+          fi
+
+      - name: Run vet
+        run: go vet ./...
+
+      - name: Run unit tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.out
+          flags: unittests
+          fail_ci_if_error: false
+
+      - name: Build Lambda functions
+        run: |
+          # Build Order Ingestion API
+          cd cmd/api
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
+          zip function.zip bootstrap
+          cd ../../
+          echo "✓ Built Order Ingestion API"
+
+          # Check if verifications directory exists and build handlers
+          if [ -d "cmd/verifications" ]; then
+            for handler in cmd/verifications/*/main.go; do
+              handler_dir=$(dirname "$handler")
+              handler_name=$(basename "$handler_dir")
+              echo "Building verification handler: $handler_name"
+              cd "$handler_dir"
+              GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
+              zip function.zip bootstrap
+              cd ../../../../
+              echo "✓ Built $handler_name"
+            done
+          fi
+
+          # Check if WMS integration handler exists and build it
+          if [ -d "cmd/wms-integration" ]; then
+            cd cmd/wms-integration
+            GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
+            zip function.zip bootstrap
+            cd ../../
+            echo "✓ Built WMS Integration"
+          fi
+
+      - name: Verify build artifacts
+        run: |
+          echo "Verifying Lambda function packages..."
+          for zip_file in $(find cmd -name function.zip); do
+            echo "Checking $zip_file..."
+            unzip -l "$zip_file"
+            if ! unzip -l "$zip_file" | grep -q "bootstrap"; then
+              echo "ERROR: bootstrap binary not found in $zip_file"
+              exit 1
+            fi
+          done
+          echo "✓ All Lambda function packages verified"
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Run Gosec security scanner
+        uses: securego/gosec@master
+        with:
+          args: ./...

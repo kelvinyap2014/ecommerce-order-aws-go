@@ -1,5 +1,5 @@
 module ecommerce-order-aws-go
 
-go 1.27.1
+go 1.26
 
-require github.com/aws/aws-lambda-go v1.55.1 // indirect
+require github.com/aws/aws-lambda-go v1.55.1
