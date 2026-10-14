@@ -142,6 +142,10 @@ aws login
 aws sts get-caller-identity
 aws configure
 aws dynamodb describe-table --table-name ecommerce-order-orders-dev --region ap-southeast-2
+aws apigatewayv2 get-apis --region ap-southeast-2
+aws apigatewayv2 get-routes --api-id <YOUR_API_ID> --region ap-southeast-2
+aws apigatewayv2 get-integrations --api-id <YOUR_API_ID> --region ap-southeast-2
+aws apigatewayv2 get-stages --api-id <YOUR_API_ID> --region ap-southeast-2
 ```
 
 ### Terraform Commands
@@ -151,7 +155,7 @@ cd terraform
 # NEW AWS EXPERIENCE: Load credentials from cache before running terraform
 source ./setup-aws-credentials.sh
 
-# Initialize Terraform (first time only)
+# Initialize any providers or modules (good habit)
 terraform init
 
 # DEV environment — plan and apply
