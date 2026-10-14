@@ -157,6 +157,7 @@ terraform apply -var-file="terraform-prod.tfvars"
 
 ### AWS Commands
 ```bash
+aws sts get-caller-identity
 aws configure
 aws dynamodb describe-table --table-name ecommerce-order-orders-dev --region ap-southeast-2
 ```
