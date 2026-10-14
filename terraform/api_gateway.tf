@@ -38,7 +38,32 @@ resource "aws_cloudwatch_log_group" "api_logs" {
   retention_in_days = 7
 }
 
-# 4. Output the public invoke URL of your API
+# 4. Integrate API Gateway with the Lambda Function
+resource "aws_apigatewayv2_integration" "lambda_integration" {
+  api_id                 = aws_apigatewayv2_api.order_api.id
+  integration_type       = "AWS_PROXY"
+  integration_method     = "POST"
+  integration_uri        = aws_lambda_function.order_ingest.invoke_arn
+  payload_format_version = "2.0"
+}
+
+# 5. Create a POST route for orders
+resource "aws_apigatewayv2_route" "post_orders" {
+  api_id    = aws_apigatewayv2_api.order_api.id
+  route_key = "POST /orders"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+}
+
+# 6. Allow API Gateway to invoke the Lambda function
+resource "aws_lambda_permission" "api_gateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.order_ingest.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.order_api.execution_arn}/*/*"
+}
+
+# 7. Output the public invoke URL of your API
 output "api_endpoint" {
   description = "Base URL of the API Gateway HTTP API"
   value       = aws_apigatewayv2_api.order_api.api_endpoint

@@ -141,11 +141,15 @@ ecommerce-order-aws-go/
 aws login
 aws sts get-caller-identity
 aws configure
+aws dynamodb list-tables
 aws dynamodb describe-table --table-name ecommerce-order-orders-dev --region ap-southeast-2
 aws apigatewayv2 get-apis --region ap-southeast-2
 aws apigatewayv2 get-routes --api-id <YOUR_API_ID> --region ap-southeast-2
 aws apigatewayv2 get-integrations --api-id <YOUR_API_ID> --region ap-southeast-2
 aws apigatewayv2 get-stages --api-id <YOUR_API_ID> --region ap-southeast-2
+aws lambda list-functions --region ap-southeast-2
+aws lambda get-function --function-name ecommerce-order-ingest-dev --region ap-southeast-2
+aws logs tail /aws/lambda/ecommerce-order-ingest-dev --follow --region ap-southeast-2
 ```
 
 ### Terraform Commands
@@ -226,3 +230,11 @@ The workflow triggers automatically on changes to:
 - `go.mod`, `go.sum` — Dependencies
 - `Makefile` — Build automation
 - `.github/workflows/build-golang.yml` — Workflow definition itself
+
+# Testing
+
+## Test API with curl
+```bash
+# Replace <api_endpoint> with your actual API Gateway URL outputted by Terraform
+curl -X POST https://<api_endpoint>/orders
+```
