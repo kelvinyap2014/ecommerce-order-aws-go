@@ -172,3 +172,20 @@ terraform apply -var-file="terraform-prod.tfvars"
 # Destroy resources (cleanup)
 terraform destroy -var-file="terraform-dev.tfvars"
 ```
+
+## Go (Golang) development
+
+```bash
+# 1. Initialize Go module
+go mod init ecommerce-order-aws-go
+
+# 2. Install the official AWS Lambda Go SDK
+go get github.com/aws/aws-lambda-go/events
+go get github.com/aws/aws-lambda-go/lambda
+
+# Compile and Package the Binary
+cd cmd/api
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
+zip function.zip bootstrap
+cd ../../
+```

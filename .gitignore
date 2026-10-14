@@ -8,6 +8,10 @@
 *.so
 *.dylib
 
+# Go lambda build artifacts
+bootstrap
+function.zip
+
 # Test binary, built with `go test -c`
 *.test
 
