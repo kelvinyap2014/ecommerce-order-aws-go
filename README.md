@@ -141,14 +141,23 @@ ecommerce-order-aws-go/
 aws login
 aws sts get-caller-identity
 aws configure
+
 aws dynamodb list-tables
 aws dynamodb describe-table --table-name ecommerce-order-orders-dev --region ap-southeast-2
+aws dynamodb scan --table-name ecommerce-order-orders-dev --region ap-southeast-2
+aws dynamodb get-item \
+    --table-name ecommerce-order-orders-dev \
+    --key '{"OrderId": {"S": "YOUR-ORDER-UUID-HERE"}}' \
+    --region ap-southeast-2
+
 aws apigatewayv2 get-apis --region ap-southeast-2
 aws apigatewayv2 get-routes --api-id <YOUR_API_ID> --region ap-southeast-2
 aws apigatewayv2 get-integrations --api-id <YOUR_API_ID> --region ap-southeast-2
 aws apigatewayv2 get-stages --api-id <YOUR_API_ID> --region ap-southeast-2
+
 aws lambda list-functions --region ap-southeast-2
 aws lambda get-function --function-name ecommerce-order-ingest-dev --region ap-southeast-2
+
 aws logs tail /aws/lambda/ecommerce-order-ingest-dev --follow --region ap-southeast-2
 ```
 
@@ -193,6 +202,11 @@ go mod init ecommerce-order-aws-go
 # 2. Install dependencies
 go get github.com/aws/aws-lambda-go/events
 go get github.com/aws/aws-lambda-go/lambda
+go get github.com/aws/aws-sdk-go-v2
+go get github.com/aws/aws-sdk-go-v2/config
+go get github.com/aws/aws-sdk-go-v2/service/dynamodb
+go get github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue
+go get github.com/google/uuid
 
 # 3. Build individual Lambda handler
 cd cmd/api
@@ -239,5 +253,18 @@ The workflow triggers automatically on changes to:
 ## Test API with curl
 ```bash
 # Replace <api_endpoint> with your actual API Gateway URL outputted by Terraform
-curl -X POST https://<api_endpoint>/orders
+curl -X POST https://<api_endpoint>/orders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "cust_999",
+    "items": [
+      {"sku": "SKU-WIDGET-01", "quantity": 2, "price": 25.50}
+    ],
+    "total_amount": 51.00,
+    "shipping_address": {
+      "street": "123 Queen St",
+      "city": "Auckland",
+      "country": "New Zealand"
+    }
+  }'
 ```
