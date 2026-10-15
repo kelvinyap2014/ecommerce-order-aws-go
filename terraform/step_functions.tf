@@ -3,10 +3,11 @@ resource "aws_sfn_state_machine" "order_workflow" {
   role_arn = aws_iam_role.sfn_exec.arn
 
   definition = templatefile("../statemachine/order_workflow.asl.json", {
-    AddressLambdaArn      = aws_lambda_function.check_address.arn
-    CreditLambdaArn       = aws_lambda_function.check_credit.arn
-    PaymentLambdaArn      = aws_lambda_function.check_payment.arn
-    UpdateStatusLambdaArn = aws_lambda_function.update_status.arn
+    AddressLambdaArn          = aws_lambda_function.check_address.arn
+    CreditLambdaArn           = aws_lambda_function.check_credit.arn
+    PaymentLambdaArn          = aws_lambda_function.check_payment.arn
+    UpdateStatusLambdaArn     = aws_lambda_function.update_status.arn
+    WmsIntegrationLambdaArn   = aws_lambda_function.wms_integration.arn
   })
 }
 

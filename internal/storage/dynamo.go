@@ -17,6 +17,7 @@ type OrderRepository interface {
 	GetOrder(ctx context.Context, orderID string) (*models.Order, error)
 	ListOrders(ctx context.Context) ([]models.Order, error)
 	UpdateOrderStatus(ctx context.Context, orderID string, status models.OrderStatus) error
+	UpdateShipmentStatus(ctx context.Context, orderID string, shipmentStatus models.ShipmentStatus, wmsShipmentID string, wmsAcceptedAt string) error
 }
 
 // DynamoOrderRepo implements OrderRepository using Amazon DynamoDB.
@@ -110,6 +111,26 @@ func (r *DynamoOrderRepo) UpdateOrderStatus(ctx context.Context, orderID string,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update order status to %s: %w", status, err)
+	}
+	return nil
+}
+
+// UpdateShipmentStatus updates shipment-related fields (ShipmentStatus, WmsShipmentId, WmsAcceptedAt) on an existing order.
+func (r *DynamoOrderRepo) UpdateShipmentStatus(ctx context.Context, orderID string, shipmentStatus models.ShipmentStatus, wmsShipmentID string, wmsAcceptedAt string) error {
+	_, err := r.Client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName: aws.String(r.TableName),
+		Key: map[string]types.AttributeValue{
+			"OrderId": &types.AttributeValueMemberS{Value: orderID},
+		},
+		UpdateExpression: aws.String("SET ShipmentStatus = :shipmentStatus, WmsShipmentId = :wmsShipmentID, WmsAcceptedAt = :wmsAcceptedAt"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":shipmentStatus": &types.AttributeValueMemberS{Value: string(shipmentStatus)},
+			":wmsShipmentID":  &types.AttributeValueMemberS{Value: wmsShipmentID},
+			":wmsAcceptedAt":  &types.AttributeValueMemberS{Value: wmsAcceptedAt},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update shipment status for order %s: %w", orderID, err)
 	}
 	return nil
 }

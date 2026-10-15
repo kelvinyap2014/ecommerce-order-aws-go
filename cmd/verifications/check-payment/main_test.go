@@ -32,6 +32,10 @@ func (m *mockOrderRepository) UpdateOrderStatus(ctx context.Context, orderID str
 	return nil
 }
 
+func (m *mockOrderRepository) UpdateShipmentStatus(ctx context.Context, orderID string, shipmentStatus models.ShipmentStatus, wmsShipmentID string, wmsAcceptedAt string) error {
+	return nil
+}
+
 func TestHandler_PaymentCheck(t *testing.T) {
 	ctx := context.TODO()
 

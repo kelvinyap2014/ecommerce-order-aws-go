@@ -1,12 +1,39 @@
 {
-  "Comment": "E-Commerce Order Verification and Orchestration Workflow",
+  "Comment": "E-Commerce Order Verification and Orchestration Workflow - With Exponential Backoff & Error Handling",
   "StartAt": "CheckAddress",
   "States": {
     "CheckAddress": {
       "Type": "Task",
       "Resource": "${AddressLambdaArn}",
+      "TimeoutSeconds": 30,
+      "Retry": [
+        {
+          "ErrorEquals": ["States.Timeout", "States.TaskFailed"],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleAddressCheckError",
+          "ResultPath": "$.system_error"
+        }
+      ],
       "Next": "AddressCheckChoice"
     },
+
+    "HandleAddressCheckError": {
+      "Type": "Pass",
+      "Result": {
+        "address_check_passed": false,
+        "reason": "System error during address validation - please retry or contact support"
+      },
+      "ResultPath": "$",
+      "Next": "AddressCheckChoice"
+    },
+
     "AddressCheckChoice": {
       "Type": "Choice",
       "Choices": [
@@ -18,6 +45,7 @@
       ],
       "Default": "CheckCredit"
     },
+
     "SetAddressFailed": {
       "Type": "Task",
       "Resource": "${UpdateStatusLambdaArn}",
@@ -33,11 +61,39 @@
       },
       "End": true
     },
+
     "CheckCredit": {
       "Type": "Task",
       "Resource": "${CreditLambdaArn}",
+      "TimeoutSeconds": 30,
+      "Retry": [
+        {
+          "ErrorEquals": ["States.Timeout", "States.TaskFailed"],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleCreditCheckError",
+          "ResultPath": "$.system_error"
+        }
+      ],
       "Next": "CreditCheckChoice"
     },
+
+    "HandleCreditCheckError": {
+      "Type": "Pass",
+      "Result": {
+        "credit_check_passed": false,
+        "reason": "System error during credit check - please retry or contact support"
+      },
+      "ResultPath": "$",
+      "Next": "CreditCheckChoice"
+    },
+
     "CreditCheckChoice": {
       "Type": "Choice",
       "Choices": [
@@ -49,6 +105,7 @@
       ],
       "Default": "CheckPayment"
     },
+
     "SetCreditFailed": {
       "Type": "Task",
       "Resource": "${UpdateStatusLambdaArn}",
@@ -64,11 +121,39 @@
       },
       "End": true
     },
+
     "CheckPayment": {
       "Type": "Task",
       "Resource": "${PaymentLambdaArn}",
+      "TimeoutSeconds": 30,
+      "Retry": [
+        {
+          "ErrorEquals": ["States.Timeout", "States.TaskFailed"],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandlePaymentCheckError",
+          "ResultPath": "$.system_error"
+        }
+      ],
       "Next": "PaymentCheckChoice"
     },
+
+    "HandlePaymentCheckError": {
+      "Type": "Pass",
+      "Result": {
+        "payment_check_passed": false,
+        "reason": "System error during payment authorization - please retry or contact support"
+      },
+      "ResultPath": "$",
+      "Next": "PaymentCheckChoice"
+    },
+
     "PaymentCheckChoice": {
       "Type": "Choice",
       "Choices": [
@@ -80,6 +165,7 @@
       ],
       "Default": "SetVerified"
     },
+
     "SetPaymentFailed": {
       "Type": "Task",
       "Resource": "${UpdateStatusLambdaArn}",
@@ -95,9 +181,11 @@
       },
       "End": true
     },
+
     "SetVerified": {
       "Type": "Task",
       "Resource": "${UpdateStatusLambdaArn}",
+      "TimeoutSeconds": 30,
       "Parameters": {
         "order_id.$": "$.order_id",
         "customer_id.$": "$.customer_id",
@@ -107,6 +195,44 @@
         "created_at.$": "$.created_at",
         "target_status": "VERIFIED"
       },
+      "Next": "DispatchToWMS"
+    },
+
+    "DispatchToWMS": {
+      "Type": "Task",
+      "Resource": "${WmsIntegrationLambdaArn}",
+      "TimeoutSeconds": 60,
+      "Retry": [
+        {
+          "ErrorEquals": ["States.Timeout", "States.TaskFailed"],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleWmsDispatchError",
+          "ResultPath": "$.system_error"
+        }
+      ],
+      "Next": "WmsDispatchSuccess"
+    },
+
+    "HandleWmsDispatchError": {
+      "Type": "Pass",
+      "Result": {
+        "wms_dispatch_failed": true,
+        "reason": "System error during WMS dispatch - warehouse team will review this order"
+      },
+      "ResultPath": "$",
+      "Next": "WmsDispatchSuccess"
+    },
+
+    "WmsDispatchSuccess": {
+      "Type": "Pass",
+      "Result": "Order verification and dispatch workflow completed",
       "End": true
     }
   }

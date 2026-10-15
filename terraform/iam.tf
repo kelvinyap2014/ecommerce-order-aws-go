@@ -100,7 +100,8 @@ resource "aws_iam_role_policy" "sfn_lambda_policy" {
         aws_lambda_function.check_address.arn,
         aws_lambda_function.check_credit.arn,
         aws_lambda_function.check_payment.arn,
-        aws_lambda_function.update_status.arn
+        aws_lambda_function.update_status.arn,
+        aws_lambda_function.wms_integration.arn
       ]
     }]
   })

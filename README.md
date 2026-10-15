@@ -44,15 +44,22 @@ graph TD
         CreditChoice -->|No| CreditFail["Update Status: CREDIT_FAILED"]
         CreditChoice -->|Yes| PaymentAuth["Lambda: Payment Check"]
 
-        PaymentAuth --> PaymentChoice{Payment Authorized?}
+        PaymentAuth --> PaymentChoice{Payment Check?}
         PaymentChoice -->|No| PaymentFail["Update Status: PAYMENT_FAILED"]
         PaymentChoice -->|Yes| UpdateVerified["Update Status: VERIFIED"]
+
+        UpdateVerified -->|WMS Dispatch| DispatchWMS["Lambda: WMS Integration"]
+        DispatchWMS --> WmsChoice{WMS Dispatch OK?}
+        WmsChoice -->|Yes| WmsSuccess["Shipment Status: WMS_ACCEPTED"]
+        WmsChoice -->|No| WmsError["Log Error, Manual Review"]
+        WmsSuccess --> WorkflowEnd["Workflow Complete"]
+        WmsError --> WorkflowEnd
     end
 
     AddressFail -->|Write Status| DDB
     CreditFail -->|Write Status| DDB
     PaymentFail -->|Write Status| DDB
-    UpdateVerified -->|Write Status| DDB
+    DispatchWMS -->|Update Shipment Status| DDB
 ```
 
 ---
@@ -71,9 +78,18 @@ graph TD
 
 ### 3.2 Step Functions Workflow (Amazon States Language - ASL)
 * **Type**: Standard Workflow (to maintain state history, audit trails, and execution logs).
-* **Error Handling Strategy**:
-  * Exponential backoff and retry rules for transient downstream dependencies (e.g., payment gateways or third-party address APIs).
-  * Explicit `Catch` blocks routing to compensation states if a check fails mid-workflow.
+* **Error Handling Strategy** (Implemented):
+  * **Exponential Backoff for Transient Failures**: Each verification task (Address, Credit, Payment) retries on timeout or Lambda failure
+    - Initial retry: 1 second delay
+    - Second retry: 2 seconds delay (1s × 2.0 backoff rate)
+    - Max 2 retries (3 total attempts) before propagating failure
+    - This handles temporary Lambda cold starts, network blips, and brief downstream service outages
+  * **Explicit Catch Blocks for Unrecoverable Errors**: Each check has a dedicated error handler state
+    - If all retries fail, a `Catch` block intercepts the error
+    - Error handler transitions the failed check to a `Pass` state, setting `check_passed: false` and a customer-friendly error reason
+    - Order is marked as failed (ADDRESS_FAILED, CREDIT_FAILED, or PAYMENT_FAILED) with detailed reason
+    - This distinguishes **transient system errors** (Swift retry) from **business logic failures** (customer declined, address blacklisted, etc.)
+  * **30-Second Task Timeout**: Prevents Lambda functions from hanging indefinitely
 
 ### 3.3 Verification Microservices (Go Lambdas)
 Each check runs as an isolated Lambda function (`cmd/verifications/...`):
@@ -81,7 +97,19 @@ Each check runs as an isolated Lambda function (`cmd/verifications/...`):
 2. **Credit Check**: Evaluates customer credit score / risk limits.
 3. **Payment Check**: Simulates interaction with an external payment gateway (token charging/securing funds).
 
-### 3.4 Storage Architecture (Amazon DynamoDB)
+### 3.4 WMS Integration Lambda (Go Lambda)
+* **Handler (`cmd/wms-integration`)**: Dispatches verified orders to the Warehouse Management System.
+* **Responsibilities**:
+  1. Receive verified order from Step Functions state machine.
+  2. Generate unique WMS shipment ID (`WMS-<OrderIdPrefix>-<Timestamp>`).
+  3. Log comprehensive order details: items (SKU, quantity, price), shipping address, customer info.
+  4. Simulate WMS API integration: construct and log mock WMS API payload.
+  5. Update DynamoDB `ShipmentStatus` → `WMS_ACCEPTED` and store `wms_shipment_id`, `wms_accepted_at` timestamp.
+  6. Return order with updated shipment metadata for Step Functions audit trail.
+* **Error Handling**: On DynamoDB write failure, error propagates to Step Functions error handler for manual review.
+* **Invocation**: Asynchronous from Step Functions (non-blocking); Step Functions continues after queuing WMS Lambda.
+
+### 3.5 Storage Architecture (Amazon DynamoDB)
 * **Table Name**: `Orders`
 * **Partition Key**: `PK` (String: `ORDER#<OrderId>`)
 * **Sort Key**: `SK` (String: `METADATA#<OrderId>`)
@@ -91,8 +119,12 @@ Each check runs as an isolated Lambda function (`cmd/verifications/...`):
   * `OrderId` (String)
   * `CustomerId` (String)
   * `OrderStatus` (`PENDING`, `VERIFIED`, `ADDRESS_FAILED`, `CREDIT_FAILED`, `PAYMENT_FAILED`, `CANCELLED`)
+  * `ShipmentStatus` (`NOT_SHIPPED`, `WMS_ACCEPTED`, `SHIPPED`, `IN_TRANSIT`, `DELIVERED`, `RETURNED`)
+  * `WmsShipmentId` (String, populated by WMS Lambda after successful acceptance)
+  * `WmsAcceptedAt` (ISO-8601 Timestamp, populated by WMS Lambda)
   * `TotalAmount` (Number)
-  * `Items` (List/Map)
+  * `Items` (List/Map) — Array of order line items with SKU, Quantity, Price
+  * `ShippingAddress` (Map) — Street, City, State, PostalCode, Country
   * `CreatedAt` / `UpdatedAt` (ISO-8601 Timestamps)
 
 ---
@@ -170,6 +202,7 @@ aws logs tail /aws/lambda/ecommerce-order-check-address-dev --follow --region ap
 aws logs tail /aws/lambda/ecommerce-order-check-credit-dev --follow --region ap-southeast-2
 aws logs tail /aws/lambda/ecommerce-order-check-payment-dev --follow --region ap-southeast-2
 aws logs tail /aws/lambda/ecommerce-order-update-status-dev --follow --region ap-southeast-2
+aws logs tail /aws/lambda/ecommerce-order-wms-integration-dev --follow --region ap-southeast-2
 ```
 
 ### Terraform Commands

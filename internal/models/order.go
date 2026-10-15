@@ -14,11 +14,12 @@ const (
 type ShipmentStatus string
 
 const (
-	ShipmentNotShipped ShipmentStatus = "NOT_SHIPPED"
-	ShipmentShipped    ShipmentStatus = "SHIPPED"
-	ShipmentInTransit  ShipmentStatus = "IN_TRANSIT"
-	ShipmentDelivered  ShipmentStatus = "DELIVERED"
-	ShipmentReturned   ShipmentStatus = "RETURNED"
+	ShipmentNotShipped  ShipmentStatus = "NOT_SHIPPED"
+	ShipmentWmsAccepted ShipmentStatus = "WMS_ACCEPTED"
+	ShipmentShipped     ShipmentStatus = "SHIPPED"
+	ShipmentInTransit   ShipmentStatus = "IN_TRANSIT"
+	ShipmentDelivered   ShipmentStatus = "DELIVERED"
+	ShipmentReturned    ShipmentStatus = "RETURNED"
 )
 
 type Address struct {
