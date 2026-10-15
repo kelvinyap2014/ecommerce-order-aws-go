@@ -79,8 +79,9 @@ func handleCreateOrder(ctx context.Context, request events.APIGatewayV2HTTPReque
 		order.OrderID = uuid.New().String()
 	}
 	order.Status = models.StatusPending
+	order.ShipmentStatus = models.ShipmentNotShipped
 	order.CreatedAt = time.Now().UTC().Format(time.RFC3339)
-	logger.Info("Order enriched - OrderID: %s, Status: %s", order.OrderID, order.Status)
+	logger.Info("Order enriched - OrderID: %s, Status: %s, ShipmentStatus: %s", order.OrderID, order.Status, order.ShipmentStatus)
 
 	// 3. Run business validation logic
 	if err := validator.ValidateOrder(order); err != nil {
