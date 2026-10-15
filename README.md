@@ -10,7 +10,7 @@ This pet project is to demonstrate the skills of AI-assisted technical design an
 ## 1. Overview & Objectives
 
 ### 1.1 Context
-Modern e-commerce platforms require fault-tolerant, asynchronous, and highly scalable order processing pipelines. When an order is placed, it must traverse several verification gates, such as address validation/blacklist screening, credit check evaluation, and payment authorization, before being dispatched to a Warehouse Management System (WMS).
+Modern e-commerce platforms require fault-tolerant, asynchronous, and highly scalable order processing pipelines. When an order is placed, it must traverse several verification gates, such as address validation/blacklist screening, credit check evaluation, and payment check, before being dispatched to a Warehouse Management System (WMS).
 
 ### 1.2 Purpose
 This technical design document outlines the architecture, data models, state workflows, and infrastructure requirements for a serverless **Order Orchestration Engine** built on AWS using Go (Golang), AWS Lambda, API Gateway, AWS Step Functions, DynamoDB, and Terraform.
@@ -19,7 +19,7 @@ This technical design document outlines the architecture, data models, state wor
 
 ## 2. Architecture & System Flow
 
-The system follows an event-driven, serverless paradigm. The ingestion layer accepts client requests via HTTP API Gateway, records the initial pending state in DynamoDB, and triggers an AWS Step Functions Standard Workflow to coordinate decoupled verification microservices written in Go.
+The system follows an event-driven, serverless paradigm. The ingestion layer accepts client requests via HTTP API Gateway and records the initial pending state in DynamoDB. A DynamoDB Stream captures INSERT events, which are consumed by a Lambda Stream Processor that filters for PENDING orders and asynchronously triggers an AWS Step Functions Standard Workflow to coordinate decoupled verification microservices written in Go.
 
 ```mermaid
 graph TD
@@ -28,9 +28,11 @@ graph TD
 
     subgraph "State & Storage"
         IngestLambda -->|Write PENDING State| DDB["Amazon DynamoDB: Orders Table"]
+        DDB -->|Stream: INSERT events| DBStream["DynamoDB Stream"]
     end
 
-    IngestLambda -->|Start Execution asynchronously| SF["AWS Step Functions: Order Workflow"]
+    DBStream -->|Filtered: INSERT + PENDING| StreamProc["Lambda: Stream Processor (Go)"]
+    StreamProc -->|Start Execution| SF["AWS Step Functions: Order Workflow"]
 
     subgraph "Step Functions State Machine"
         SF --> AddressCheck["Lambda: Address & Blacklist Check"]
@@ -40,7 +42,7 @@ graph TD
 
         CreditCheck --> CreditChoice{Credit OK?}
         CreditChoice -->|No| CreditFail["Update Status: CREDIT_FAILED"]
-        CreditChoice -->|Yes| PaymentAuth["Lambda: Payment Authorization"]
+        CreditChoice -->|Yes| PaymentAuth["Lambda: Payment Check"]
 
         PaymentAuth --> PaymentChoice{Payment Authorized?}
         PaymentChoice -->|No| PaymentFail["Update Status: PAYMENT_FAILED"]
@@ -65,8 +67,7 @@ graph TD
   2. Generate a unique `OrderId` (UUID v4) and timestamp.
   3. Enforce **Idempotency** using conditional DynamoDB writes (`attribute_not_exists(OrderId)`).
   4. Write initial order state (`PENDING`) to DynamoDB.
-  5. Asynchronously trigger the Step Functions State Machine via AWS SDK for Go v2 (`SFN.StartExecution`).
-  6. Return `202 Accepted` with the `OrderId` and execution ARN.
+  5. Return `202 Accepted` with the `OrderId`.
 
 ### 3.2 Step Functions Workflow (Amazon States Language - ASL)
 * **Type**: Standard Workflow (to maintain state history, audit trails, and execution logs).
@@ -78,7 +79,7 @@ graph TD
 Each check runs as an isolated Lambda function (`cmd/verifications/...`):
 1. **Address & Blacklist Check**: Compares customer address components against internal fraud blocklists and geographic delivery zone availability.
 2. **Credit Check**: Evaluates customer credit score / risk limits.
-3. **Payment Authorization**: Simulates interaction with an external payment gateway (token charging/securing funds).
+3. **Payment Check**: Simulates interaction with an external payment gateway (token charging/securing funds).
 
 ### 3.4 Storage Architecture (Amazon DynamoDB)
 * **Table Name**: `Orders`
@@ -110,7 +111,6 @@ The infrastructure is fully defined via modular Terraform code located in the `/
 ## 5. Non-Functional Requirements & Production Considerations
 
 * **Idempotency**: Prevent duplicate order processing by leveraging DynamoDB conditional expressions during ingestion and tracking state transitions explicitly inside Step Functions.
-* **Observability**: Implement structured JSON logging using Go's standard `log/slog` package. Propagate correlation IDs (`X-Correlation-Id`) from API Gateway across Step Functions execution inputs down into each individual Lambda handler.
 * **Security**: Enforce IAM least-privilege access across all Lambda execution roles, utilize API Gateway request validation schemas, and store mock secrets securely via environment configuration or AWS Systems Manager Parameter Store.
 
 # Development
