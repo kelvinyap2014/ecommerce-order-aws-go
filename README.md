@@ -212,6 +212,7 @@ go get github.com/aws/aws-sdk-go-v2
 go get github.com/aws/aws-sdk-go-v2/config
 go get github.com/aws/aws-sdk-go-v2/service/dynamodb
 go get github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue
+go get github.com/aws/aws-sdk-go-v2/service/sfn
 go get github.com/google/uuid
 
 # 3. Build individual Lambda handler

@@ -24,16 +24,28 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "dynamodb:PutItem",
-        "dynamodb:GetItem",
-        "dynamodb:Scan",
-        "dynamodb:UpdateItem"
-      ]
-      Resource = aws_dynamodb_table.orders.arn
-    }]
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:Scan",
+          "dynamodb:UpdateItem"
+        ]
+        Resource = aws_dynamodb_table.orders.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetRecords",
+          "dynamodb:GetShardIterator",
+          "dynamodb:DescribeStream",
+          "dynamodb:ListStreams"
+        ]
+        Resource = aws_dynamodb_table.orders.stream_arn
+      }
+    ]
   })
 }
 

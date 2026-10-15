@@ -8,6 +8,10 @@ resource "aws_dynamodb_table" "orders" {
     type = "S"
   }
 
+  # Enable DynamoDB Streams
+  stream_enabled   = true
+  stream_view_type = "NEW_IMAGE" # We only need the newly inserted order record
+
   point_in_time_recovery {
     enabled = var.environment == "prod" # Enable PITR automatically only in prod
 
