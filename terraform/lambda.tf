@@ -21,6 +21,12 @@ resource "aws_lambda_function" "check_address" {
   handler          = "bootstrap"
   runtime          = "provided.al2023"
   source_code_hash = filebase64sha256("../cmd/verifications/check-address/function.zip")
+
+  environment {
+    variables = {
+      ORDERS_TABLE_NAME = aws_dynamodb_table.orders.name
+    }
+  }
 }
 
 # Verification Lambda 2. Credit Check Lambda
@@ -31,6 +37,12 @@ resource "aws_lambda_function" "check_credit" {
   handler          = "bootstrap"
   runtime          = "provided.al2023"
   source_code_hash = filebase64sha256("../cmd/verifications/check-credit/function.zip")
+
+  environment {
+    variables = {
+      ORDERS_TABLE_NAME = aws_dynamodb_table.orders.name
+    }
+  }
 }
 
 # Verification Lambda 3. Payment Check Lambda
@@ -41,6 +53,12 @@ resource "aws_lambda_function" "check_payment" {
   handler          = "bootstrap"
   runtime          = "provided.al2023"
   source_code_hash = filebase64sha256("../cmd/verifications/check-payment/function.zip")
+
+  environment {
+    variables = {
+      ORDERS_TABLE_NAME = aws_dynamodb_table.orders.name
+    }
+  }
 }
 
 # Verification Lambda 4. Status Updater Lambda (Interacts with DynamoDB)

@@ -7,14 +7,13 @@ import (
 	"os"
 	"time"
 
-	"ecommerce-order-aws-go/internal/logger"
-	"ecommerce-order-aws-go/internal/models"
-
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sfn"
+
+	"ecommerce-order-aws-go/internal/logger"
 )
 
 var (
@@ -46,40 +45,46 @@ func Handler(ctx context.Context, event events.DynamoDBEvent) error {
 			continue
 		}
 
-		// 2. Convert DynamoDB stream NewImage to Order model, mapping ALL attributes
-		var order models.Order
-
-		// Convert Lambda event's DynamoDB AttributeValue format to JSON, then unmarshal to Order
-		// This handles all Order fields: OrderID, CustomerID, Items, ShippingAddress, TotalAmount, Status, ShipmentStatus, CreatedAt
+		// 2. Extract OrderID from the stream record (minimal parsing)
+		var orderData map[string]interface{}
 		jsonData, err := json.Marshal(newImage)
 		if err != nil {
 			logger.Error("Failed to marshal DynamoDB stream NewImage to JSON: %v", err)
 			continue
 		}
 
-		err = json.Unmarshal(jsonData, &order)
+		err = json.Unmarshal(jsonData, &orderData)
 		if err != nil {
-			logger.Error("Failed to unmarshal DynamoDB stream record to Order struct: %v", err)
+			logger.Error("Failed to unmarshal to map: %v", err)
 			continue
 		}
 
-		// Validate critical fields are present
-		if order.OrderID == "" || order.Status == "" {
-			logger.Warn("Skipping record: OrderID or Status is missing from stream event")
+		orderID := ""
+		if id, ok := orderData["OrderId"]; ok {
+			orderID = fmt.Sprintf("%v", id)
+		}
+
+		if orderID == "" {
+			logger.Warn("Skipping record: OrderId not found in stream event")
 			continue
 		}
 
-		logger.Info("Triggering Step Functions workflow for Order ID: %s", order.OrderID)
+		logger.Info("Triggering Step Functions workflow for Order ID: %s", orderID)
 
-		// 3. Start Step Functions Execution
-		orderJSON, _ := json.Marshal(order)
+		// 3. Start Step Functions Execution with just the order_id
+		// Downstream Lambdas will fetch the full order from DynamoDB
+		input := map[string]interface{}{
+			"order_id": orderID,
+		}
+		inputJSON, _ := json.Marshal(input)
+
 		_, err = sfnClient.StartExecution(ctx, &sfn.StartExecutionInput{
 			StateMachineArn: aws.String(sfnWorkflowArn),
-			Name:            aws.String(fmt.Sprintf("stream-order-%s-%d", order.OrderID, time.Now().Unix())),
-			Input:           aws.String(string(orderJSON)),
+			Name:            aws.String(fmt.Sprintf("stream-order-%s-%d", orderID, time.Now().Unix())),
+			Input:           aws.String(string(inputJSON)),
 		})
 		if err != nil {
-			logger.Error("Failed to start workflow for order %s: %v", order.OrderID, err)
+			logger.Error("Failed to start workflow for order %s: %v", orderID, err)
 			return err // Returning error causes Lambda to retry this batch safely
 		}
 	}

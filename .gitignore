@@ -37,7 +37,8 @@ go.work.sum
 # .vscode/
 
 .terraform/
-.terraform.lock.hcl
+.terraform
+.terraform*
 terraform.tfstate
 terraform.tfstate.backup
 
