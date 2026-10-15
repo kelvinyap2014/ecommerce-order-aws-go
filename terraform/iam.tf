@@ -29,7 +29,8 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
       Action = [
         "dynamodb:PutItem",
         "dynamodb:GetItem",
-        "dynamodb:Scan"
+        "dynamodb:Scan",
+        "dynamodb:UpdateItem"
       ]
       Resource = aws_dynamodb_table.orders.arn
     }]
