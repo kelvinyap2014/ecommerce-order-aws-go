@@ -16,6 +16,7 @@ type OrderRepository interface {
 	SaveOrder(ctx context.Context, order models.Order) error
 	GetOrder(ctx context.Context, orderID string) (*models.Order, error)
 	ListOrders(ctx context.Context) ([]models.Order, error)
+	UpdateOrderStatus(ctx context.Context, orderID string, status models.OrderStatus) error
 }
 
 // DynamoOrderRepo implements OrderRepository using Amazon DynamoDB.
@@ -92,4 +93,23 @@ func (r *DynamoOrderRepo) ListOrders(ctx context.Context) ([]models.Order, error
 	}
 
 	return orders, nil
+}
+
+// UpdateOrderStatus modifies only the Status attribute of an order in DynamoDB.
+func (r *DynamoOrderRepo) UpdateOrderStatus(ctx context.Context, orderID string, status models.OrderStatus) error {
+	_, err := r.Client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName: aws.String(r.TableName),
+		Key: map[string]types.AttributeValue{
+			"OrderId": &types.AttributeValueMemberS{Value: orderID},
+		},
+		UpdateExpression:         aws.String("SET #st = :status"),
+		ExpressionAttributeNames: map[string]string{"#st": "Status"},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":status": &types.AttributeValueMemberS{Value: string(status)},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update order status to %s: %w", status, err)
+	}
+	return nil
 }

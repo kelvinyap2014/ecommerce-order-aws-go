@@ -36,12 +36,12 @@ type OrderItem struct {
 }
 
 type Order struct {
-	OrderID       string         `json:"order_id" dynamodbav:"OrderId"`
-	CustomerID    string         `json:"customer_id" dynamodbav:"CustomerId"`
-	Items         []OrderItem    `json:"items" dynamodbav:"Items"`
-	ShippingAddr  Address        `json:"shipping_address" dynamodbav:"ShippingAddress"`
-	TotalAmount   float64        `json:"total_amount" dynamodbav:"TotalAmount"`
-	Status        OrderStatus    `json:"status" dynamodbav:"Status"`
+	OrderID        string         `json:"order_id" dynamodbav:"OrderId"`
+	CustomerID     string         `json:"customer_id" dynamodbav:"CustomerId"`
+	Items          []OrderItem    `json:"items" dynamodbav:"Items"`
+	ShippingAddr   Address        `json:"shipping_address" dynamodbav:"ShippingAddress"`
+	TotalAmount    float64        `json:"total_amount" dynamodbav:"TotalAmount"`
+	Status         OrderStatus    `json:"status" dynamodbav:"Status"`
 	ShipmentStatus ShipmentStatus `json:"shipment_status" dynamodbav:"ShipmentStatus"`
-	CreatedAt     string         `json:"created_at" dynamodbav:"CreatedAt"`
+	CreatedAt      string         `json:"created_at" dynamodbav:"CreatedAt"`
 }
