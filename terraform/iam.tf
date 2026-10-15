@@ -49,6 +49,25 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
   })
 }
 
+# IAM Policy allowing Lambda to invoke Step Functions
+resource "aws_iam_role_policy" "lambda_sfn_policy" {
+  name = "${var.project_name}-lambda-sfn-${var.environment}"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "states:StartExecution"
+        ]
+        Resource = aws_sfn_state_machine.order_workflow.arn
+      }
+    ]
+  })
+}
+
 # IAM Role for Step Functions Execution
 resource "aws_iam_role" "sfn_exec" {
   name = "${var.project_name}-sfn-exec-${var.environment}"

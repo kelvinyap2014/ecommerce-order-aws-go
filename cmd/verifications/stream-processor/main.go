@@ -61,11 +61,16 @@ func Handler(ctx context.Context, event events.DynamoDBEvent) error {
 
 		orderID := ""
 		if id, ok := orderData["OrderId"]; ok {
-			orderID = fmt.Sprintf("%v", id)
+			// DynamoDB format: {"S": "uuid-value"}
+			if idMap, ok := id.(map[string]interface{}); ok {
+				if val, ok := idMap["S"]; ok {
+					orderID = val.(string)
+				}
+			}
 		}
 
 		if orderID == "" {
-			logger.Warn("Skipping record: OrderId not found in stream event")
+			logger.Warn("Skipping record: OrderId not found or in unexpected format")
 			continue
 		}
 
