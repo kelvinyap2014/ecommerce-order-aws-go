@@ -1,0 +1,113 @@
+{
+  "Comment": "E-Commerce Order Verification and Orchestration Workflow",
+  "StartAt": "CheckAddress",
+  "States": {
+    "CheckAddress": {
+      "Type": "Task",
+      "Resource": "${AddressLambdaArn}",
+      "Next": "AddressCheckChoice"
+    },
+    "AddressCheckChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.address_check_passed",
+          "BooleanEquals": false,
+          "Next": "SetAddressFailed"
+        }
+      ],
+      "Default": "CheckCredit"
+    },
+    "SetAddressFailed": {
+      "Type": "Task",
+      "Resource": "${UpdateStatusLambdaArn}",
+      "Parameters": {
+        "order_id.$": "$.order_id",
+        "customer_id.$": "$.customer_id",
+        "items.$": "$.items",
+        "shipping_address.$": "$.shipping_address",
+        "total_amount.$": "$.total_amount",
+        "created_at.$": "$.created_at",
+        "target_status": "ADDRESS_FAILED",
+        "reason.$": "$.reason"
+      },
+      "End": true
+    },
+    "CheckCredit": {
+      "Type": "Task",
+      "Resource": "${CreditLambdaArn}",
+      "Next": "CreditCheckChoice"
+    },
+    "CreditCheckChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.credit_check_passed",
+          "BooleanEquals": false,
+          "Next": "SetCreditFailed"
+        }
+      ],
+      "Default": "CheckPayment"
+    },
+    "SetCreditFailed": {
+      "Type": "Task",
+      "Resource": "${UpdateStatusLambdaArn}",
+      "Parameters": {
+        "order_id.$": "$.order_id",
+        "customer_id.$": "$.customer_id",
+        "items.$": "$.items",
+        "shipping_address.$": "$.shipping_address",
+        "total_amount.$": "$.total_amount",
+        "created_at.$": "$.created_at",
+        "target_status": "CREDIT_FAILED",
+        "reason.$": "$.reason"
+      },
+      "End": true
+    },
+    "CheckPayment": {
+      "Type": "Task",
+      "Resource": "${PaymentLambdaArn}",
+      "Next": "PaymentCheckChoice"
+    },
+    "PaymentCheckChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.payment_check_passed",
+          "BooleanEquals": false,
+          "Next": "SetPaymentFailed"
+        }
+      ],
+      "Default": "SetVerified"
+    },
+    "SetPaymentFailed": {
+      "Type": "Task",
+      "Resource": "${UpdateStatusLambdaArn}",
+      "Parameters": {
+        "order_id.$": "$.order_id",
+        "customer_id.$": "$.customer_id",
+        "items.$": "$.items",
+        "shipping_address.$": "$.shipping_address",
+        "total_amount.$": "$.total_amount",
+        "created_at.$": "$.created_at",
+        "target_status": "PAYMENT_FAILED",
+        "reason.$": "$.reason"
+      },
+      "End": true
+    },
+    "SetVerified": {
+      "Type": "Task",
+      "Resource": "${UpdateStatusLambdaArn}",
+      "Parameters": {
+        "order_id.$": "$.order_id",
+        "customer_id.$": "$.customer_id",
+        "items.$": "$.items",
+        "shipping_address.$": "$.shipping_address",
+        "total_amount.$": "$.total_amount",
+        "created_at.$": "$.created_at",
+        "target_status": "VERIFIED"
+      },
+      "End": true
+    }
+  }
+}

@@ -36,3 +36,41 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
     }]
   })
 }
+
+# IAM Role for Step Functions Execution
+resource "aws_iam_role" "sfn_exec" {
+  name = "${var.project_name}-sfn-exec-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "states.amazonaws.com"
+      }
+    }]
+  })
+}
+
+# Policy allowing Step Functions to invoke the verification Lambdas
+resource "aws_iam_role_policy" "sfn_lambda_policy" {
+  name = "${var.project_name}-sfn-lambda-${var.environment}"
+  role = aws_iam_role.sfn_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "lambda:InvokeFunction"
+      ]
+      Resource = [
+        aws_lambda_function.check_address.arn,
+        aws_lambda_function.check_credit.arn,
+        aws_lambda_function.check_payment.arn,
+        aws_lambda_function.update_status.arn
+      ]
+    }]
+  })
+}
