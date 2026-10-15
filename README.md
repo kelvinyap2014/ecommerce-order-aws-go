@@ -34,17 +34,23 @@ graph TD
 
     subgraph "Step Functions State Machine"
         SF --> AddressCheck["Lambda: Address & Blacklist Check"]
-        AddressCheck --> CreditCheck["Lambda: Credit Check"]
-        CreditCheck --> PaymentAuth["Lambda: Payment Authorization"]
+        AddressCheck --> AddressChoice{Address Valid?}
+        AddressChoice -->|No| AddressFail["Update Status: ADDRESS_FAILED"]
+        AddressChoice -->|Yes| CreditCheck["Lambda: Credit Check"]
 
-        PaymentAuth --> Choice{All Checks Passed?}
+        CreditCheck --> CreditChoice{Credit OK?}
+        CreditChoice -->|No| CreditFail["Update Status: CREDIT_FAILED"]
+        CreditChoice -->|Yes| PaymentAuth["Lambda: Payment Authorization"]
 
-        Choice -->|Yes| WMS["Lambda: Dispatch to WMS Integration"]
-        Choice -->|No| FailHandler["Lambda: Mark Order Failed & Refund"]
+        PaymentAuth --> PaymentChoice{Payment Authorized?}
+        PaymentChoice -->|No| PaymentFail["Update Status: PAYMENT_FAILED"]
+        PaymentChoice -->|Yes| UpdateVerified["Update Status: VERIFIED"]
     end
 
-    WMS -->|Update Status: CONFIRMED| DDB
-    FailHandler -->|Update Status: REJECTED| DDB
+    AddressFail -->|Write Status| DDB
+    CreditFail -->|Write Status| DDB
+    PaymentFail -->|Write Status| DDB
+    UpdateVerified -->|Write Status| DDB
 ```
 
 ---
@@ -83,7 +89,7 @@ Each check runs as an isolated Lambda function (`cmd/verifications/...`):
 * **Attributes**:
   * `OrderId` (String)
   * `CustomerId` (String)
-  * `OrderStatus` (`PENDING`, `VERIFIED`, `PAYMENT_FAILED`, `CONFIRMED`, `CANCELLED`)
+  * `OrderStatus` (`PENDING`, `VERIFIED`, `ADDRESS_FAILED`, `CREDIT_FAILED`, `PAYMENT_FAILED`, `CANCELLED`)
   * `TotalAmount` (Number)
   * `Items` (List/Map)
   * `CreatedAt` / `UpdatedAt` (ISO-8601 Timestamps)

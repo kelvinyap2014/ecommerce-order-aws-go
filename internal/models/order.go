@@ -5,8 +5,9 @@ type OrderStatus string
 const (
 	StatusPending       OrderStatus = "PENDING"
 	StatusVerified      OrderStatus = "VERIFIED"
+	StatusAddressFailed OrderStatus = "ADDRESS_FAILED"
+	StatusCreditFailed  OrderStatus = "CREDIT_FAILED"
 	StatusPaymentFailed OrderStatus = "PAYMENT_FAILED"
-	StatusConfirmed     OrderStatus = "CONFIRMED"
 	StatusCancelled     OrderStatus = "CANCELLED"
 )
 
