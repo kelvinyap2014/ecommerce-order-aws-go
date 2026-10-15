@@ -28,6 +28,10 @@ func (m *mockOrderRepository) ListOrders(ctx context.Context) ([]models.Order, e
 	return nil, nil
 }
 
+func (m *mockOrderRepository) ListOrdersByCustomer(ctx context.Context, customerID string) ([]models.Order, error) {
+	return nil, nil
+}
+
 func (m *mockOrderRepository) UpdateOrderStatus(ctx context.Context, orderID string, status models.OrderStatus) error {
 	return nil
 }

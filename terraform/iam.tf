@@ -31,9 +31,13 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
           "dynamodb:PutItem",
           "dynamodb:GetItem",
           "dynamodb:Scan",
+          "dynamodb:Query",
           "dynamodb:UpdateItem"
         ]
-        Resource = aws_dynamodb_table.orders.arn
+        Resource = [
+          aws_dynamodb_table.orders.arn,
+          "${aws_dynamodb_table.orders.arn}/index/*"
+        ]
       },
       {
         Effect = "Allow"

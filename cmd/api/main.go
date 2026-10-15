@@ -50,9 +50,9 @@ func Handler(ctx context.Context, request events.APIGatewayV2HTTPRequest) (event
 		return handleCreateOrder(ctx, request)
 	}
 
-	// Route: GET /orders (List All Orders)
+	// Route: GET /orders (List All Orders or Filter by Customer)
 	if method == "GET" || routeKey == "GET /orders" {
-		return handleListOrders(ctx)
+		return handleListOrders(ctx, request)
 	}
 
 	logger.Warn("Route not found for method: %s, route: %s", method, routeKey)
@@ -120,9 +120,23 @@ func handleCreateOrder(ctx context.Context, request events.APIGatewayV2HTTPReque
 	}, nil
 }
 
-func handleListOrders(ctx context.Context) (events.APIGatewayV2HTTPResponse, error) {
-	logger.Info("Listing all orders")
-	orders, err := orderRepo.ListOrders(ctx)
+func handleListOrders(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+	// Check for optional customer_id query parameter
+	customerID := request.QueryStringParameters["customer_id"]
+
+	var orders []models.Order
+	var err error
+
+	if customerID != "" {
+		// Query by CustomerId using GSI (fast, indexed query)
+		logger.Info("Querying orders by CustomerId: %s", customerID)
+		orders, err = orderRepo.ListOrdersByCustomer(ctx, customerID)
+	} else {
+		// Scan all orders (full table scan, not indexed)
+		logger.Info("Listing all orders (scan)")
+		orders, err = orderRepo.ListOrders(ctx)
+	}
+
 	if err != nil {
 		logger.Error("Failed to list orders: %v", err)
 		return events.APIGatewayV2HTTPResponse{
@@ -130,7 +144,7 @@ func handleListOrders(ctx context.Context) (events.APIGatewayV2HTTPResponse, err
 			Body:       `{"error": "internal server error"}`,
 		}, nil
 	}
-	logger.Info("Retrieved %d orders from DynamoDB", len(orders))
+	logger.Info("Retrieved %d orders", len(orders))
 
 	responseBody, _ := json.Marshal(orders)
 	logger.Info("Returning 200 OK with orders list")

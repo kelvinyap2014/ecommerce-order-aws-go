@@ -109,23 +109,31 @@ Each check runs as an isolated Lambda function (`cmd/verifications/...`):
 * **Error Handling**: On DynamoDB write failure, error propagates to Step Functions error handler for manual review.
 * **Invocation**: Asynchronous from Step Functions (non-blocking); Step Functions continues after queuing WMS Lambda.
 
-### 3.5 Storage Architecture (Amazon DynamoDB)
-* **Table Name**: `Orders`
-* **Partition Key**: `PK` (String: `ORDER#<OrderId>`)
-* **Sort Key**: `SK` (String: `METADATA#<OrderId>`)
-* **Global Secondary Indexes (GSI)**:
-  * `CustomerIndex`: PK = `CUSTOMER#<CustomerId>`, SK = `CREATED_AT` (Enables querying order history by customer).
-* **Attributes**:
-  * `OrderId` (String)
-  * `CustomerId` (String)
-  * `OrderStatus` (`PENDING`, `VERIFIED`, `ADDRESS_FAILED`, `CREDIT_FAILED`, `PAYMENT_FAILED`, `CANCELLED`)
-  * `ShipmentStatus` (`NOT_SHIPPED`, `WMS_ACCEPTED`, `SHIPPED`, `IN_TRANSIT`, `DELIVERED`, `RETURNED`)
-  * `WmsShipmentId` (String, populated by WMS Lambda after successful acceptance)
-  * `WmsAcceptedAt` (ISO-8601 Timestamp, populated by WMS Lambda)
-  * `TotalAmount` (Number)
-  * `Items` (List/Map) — Array of order line items with SKU, Quantity, Price
-  * `ShippingAddress` (Map) — Street, City, State, PostalCode, Country
-  * `CreatedAt` / `UpdatedAt` (ISO-8601 Timestamps)
+### 3.5 Storage Architecture (Amazon DynamoDB - Implemented)
+* **Table Name**: `ecommerce-order-orders-{environment}`
+* **Partition Key**: `OrderId` (String, UUID v4)
+* **Billing Mode**: `PAY_PER_REQUEST` (On-demand, scales automatically)
+* **Streams**: Enabled with `NEW_IMAGE` view type (triggers Step Functions workflow)
+* **Point-in-Time Recovery**: Enabled for PROD only
+
+#### Attributes
+* `OrderId` (String) — Unique order identifier
+* `CustomerId` (String) — Customer ID for filtering/grouping
+* `Status` (String: `PENDING`, `VERIFIED`, `ADDRESS_FAILED`, `CREDIT_FAILED`, `PAYMENT_FAILED`, `CANCELLED`)
+* `ShipmentStatus` (String: `NOT_SHIPPED`, `WMS_ACCEPTED`, `SHIPPED`, `IN_TRANSIT`, `DELIVERED`, `RETURNED`)
+* `WmsShipmentId` (String) — WMS system shipment ID
+* `WmsAcceptedAt` (ISO-8601 Timestamp)
+* `TotalAmount` (Number)
+* `Items` (List of Maps) — Order line items with SKU, Quantity, Price
+* `ShippingAddress` (Map) — Street, City, State, PostalCode, Country
+* `CreatedAt` (ISO-8601 Timestamp)
+
+#### Global Secondary Index: `CustomerIndex` (Implemented)
+* **Index Keys**: `CustomerId` (Partition Key), `CreatedAt` (Sort Key)
+* **Projection**: All attributes (no additional lookups needed)
+* **Use Case**: Query all orders for a customer, sorted by creation date (most recent first)
+* **Query Example**: `GET /orders?customer_id=cust_123` → returns all customer's orders in DESC order
+* **Performance**: O(log n) indexed query instead of O(n) full table scan
 
 ---
 
@@ -298,8 +306,14 @@ The workflow triggers automatically on changes to:
 ## Test API with curl
 ```bash
 # Replace <api_endpoint> with your actual API Gateway URL outputted by Terraform
+
+# GET all orders (full table scan — O(n), slower for large tables)
 curl -X GET https://<api_endpoint>/orders
 
+# GET orders for a specific customer (GSI query — O(log n), fast)
+curl -X GET https://<api_endpoint>/orders?customer_id=cust_999
+
+# POST: Create a new order
 curl -X POST https://<api_endpoint>/orders \
   -H "Content-Type: application/json" \
   -d '{

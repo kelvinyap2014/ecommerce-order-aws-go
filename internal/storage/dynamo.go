@@ -16,6 +16,7 @@ type OrderRepository interface {
 	SaveOrder(ctx context.Context, order models.Order) error
 	GetOrder(ctx context.Context, orderID string) (*models.Order, error)
 	ListOrders(ctx context.Context) ([]models.Order, error)
+	ListOrdersByCustomer(ctx context.Context, customerID string) ([]models.Order, error)
 	UpdateOrderStatus(ctx context.Context, orderID string, status models.OrderStatus) error
 	UpdateShipmentStatus(ctx context.Context, orderID string, shipmentStatus models.ShipmentStatus, wmsShipmentID string, wmsAcceptedAt string) error
 }
@@ -85,6 +86,31 @@ func (r *DynamoOrderRepo) ListOrders(ctx context.Context) ([]models.Order, error
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to scan orders: %w", err)
+	}
+
+	var orders []models.Order
+	err = attributevalue.UnmarshalListOfMaps(out.Items, &orders)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal orders: %w", err)
+	}
+
+	return orders, nil
+}
+
+// ListOrdersByCustomer queries orders by CustomerId using the CustomerIndex GSI.
+// Results are returned in chronological order (most recent first via DESC sorting).
+func (r *DynamoOrderRepo) ListOrdersByCustomer(ctx context.Context, customerID string) ([]models.Order, error) {
+	out, err := r.Client.Query(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String(r.TableName),
+		IndexName:              aws.String("CustomerIndex"),
+		KeyConditionExpression: aws.String("CustomerId = :customerID"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":customerID": &types.AttributeValueMemberS{Value: customerID},
+		},
+		ScanIndexForward: aws.Bool(false), // DESC order: newest first
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query orders by customer %s: %w", customerID, err)
 	}
 
 	var orders []models.Order
