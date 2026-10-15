@@ -162,9 +162,19 @@ aws apigatewayv2 get-integrations --api-id <YOUR_API_ID> --region ap-southeast-2
 aws apigatewayv2 get-stages --api-id <YOUR_API_ID> --region ap-southeast-2
 
 aws lambda list-functions --region ap-southeast-2
-aws lambda get-function --function-name ecommerce-order-ingest-dev --region ap-southeast-2
+aws lambda get-function --function-name ecommerce-order-api-dev --region ap-southeast-2
 
-aws logs tail /aws/lambda/ecommerce-order-ingest-dev --follow --region ap-southeast-2
+aws logs tail /aws/lambda/ecommerce-order-api-dev --follow --region ap-southeast-2
+aws logs start-live-tail \
+    --log-group-identifiers \
+        arn:aws:logs:ap-southeast-2:YOUR_ACCOUNT_ID:log-group:/aws/lambda/ecommerce-order-api-dev \
+        arn:aws:logs:ap-southeast-2:YOUR_ACCOUNT_ID:log-group:/aws/lambda/ecommerce-order-stream-processor-dev \
+        arn:aws:logs:ap-southeast-2:YOUR_ACCOUNT_ID:log-group:/aws/lambda/ecommerce-order-check-address-dev \
+        arn:aws:logs:ap-southeast-2:YOUR_ACCOUNT_ID:log-group:/aws/lambda/ecommerce-order-check-credit-dev \
+        arn:aws:logs:ap-southeast-2:YOUR_ACCOUNT_ID:log-group:/aws/lambda/ecommerce-order-check-payment-dev \
+        arn:aws:logs:ap-southeast-2:YOUR_ACCOUNT_ID:log-group:/aws/lambda/ecommerce-order-update-status-dev \
+    --mode interactive \
+    --region ap-southeast-2
 ```
 
 ### Terraform Commands

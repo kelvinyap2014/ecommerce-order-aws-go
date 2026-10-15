@@ -1,6 +1,6 @@
-resource "aws_lambda_function" "order_ingest" {
+resource "aws_lambda_function" "order_api" {
   filename         = "../cmd/api/function.zip"
-  function_name    = "${var.project_name}-ingest-${var.environment}"
+  function_name    = "${var.project_name}-api-${var.environment}"
   role             = aws_iam_role.lambda_exec.arn
   handler          = "bootstrap"
   runtime          = "provided.al2023"
